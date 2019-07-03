@@ -6,8 +6,14 @@ CDP_WORKSPACE_HOME = '$HOME/projects'
 SSH_PRIVATE_KEY = '$HOME/.ssh/id_rsa'
 
 def exec_interactive_cmd(cmd):
-    proc = sp.Popen(cmd, shell=True, stdout=sp.PIPE)
-    output=proc.communicate()[0].strip()
+    proc = sp.Popen(cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+    output = ''
+    for line in iter(proc.stdout.readline,''):
+        output += line
+    for line in iter(proc.stderr.readline,''):
+        output += line
+    # need for debug
+    #print output
     return output
 
 def softwares():
@@ -17,18 +23,26 @@ def softwares():
         'atom',
         'maven',
         'blue-jeans',
-        'aws-cli',
-
+        'awscli',
+        'gpg-suite',
+        'sqlworkbenchj',
+        'jq'
     ]
 
 def projects():
     return [
+        'cdp-automation-nifi-cluster',
+        'cdp-automation-nifi-registry',
+        'cdp-automation-nifi-zk',
+        'cdp-automation-nifi-registry-db',
+        'cdp-automation-nifi-zk-sg',
+        'cdp-nifi-google-ad-manager-soap',
         'cdp-analytics',
-        'cdp-core',
-        'cdp-schema',
-        'cdp-stream',
-        'dp-biz',
-        'dp-tools',
+        #'cdp-core',
+        #'cdp-schema',
+        #'cdp-stream',
+        #'dp-biz',
+        #'dp-tools',
         'dp-aws-tools'
     ]
 
@@ -37,21 +51,25 @@ def ssh_env():
 
 def getting_ready_for_coffee():
     if True==True:
+        installed = exec_interactive_cmd('brew list && brew cask list')
+        print 'list of installed apps:\n'+installed
         exec_interactive_cmd('brew tap caskroom/cask')
         for k in softwares():
-            result = exec_interactive_cmd('brew cask info '+k)
-            if result.find('Error: Cask '):
-                print('installing... '+ k)
-                result = exec_interactive_cmd('brew install '+k)
-            else:
-                print('installing from cask... '+ k)
-                result = exec_interactive_cmd('brew cask install '+k)
+            if installed.find(k) == -1:
+                result = exec_interactive_cmd('brew cask info '+k)
+                if result.find('is unavailable:') > -1:
+                    print('installing... '+ k)
+                    result = exec_interactive_cmd('brew install '+k)
+                else:
+                    print('installing from cask... '+ k)
+                    result = exec_interactive_cmd('brew cask install '+k)
+                print k+' is installed successfully'
         exec_interactive_cmd('brew cleanup')
 
     ssh_env()
     for k in projects():
         ls = exec_interactive_cmd('cd '+CDP_WORKSPACE_HOME+'; ls | grep '+k)
-        if ls==k:
+        if ls.find(k) > -1:
             print('rebasing git repo... '+ k)
             exec_interactive_cmd('cd '+CDP_WORKSPACE_HOME+'/'+k+'; git pull -r')
         else:
